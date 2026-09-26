@@ -75,6 +75,16 @@ export const PROVIDERS: ProviderMeta[] = [
     needsBackendSetup: 'Any broker with an API works — your bot or script pushes closed deals straight to your journal. The token is shown once and only its hash is stored.',
     fields: [{ key: 'label', label: 'Nickname', placeholder: 'e.g. My gold bot' }],
   },
+  {
+    id: 'mt-report',
+    name: 'MT4/MT5 File Upload',
+    tagline: 'Drag & drop HTML report from MetaTrader terminal',
+    docsUrl: 'https://www.metatrader4.com/en/trading-platform/help/service/account_history',
+    needsBackendSetup: 'No passwords or API keys needed. Export "Account History → Save as Report (HTML)" from your MT4/MT5 desktop app, then drag the .html file here.',
+    fields: [
+      { key: 'label', label: 'Nickname', placeholder: 'e.g. IC Markets MT5 import' },
+    ],
+  },
 ];
 
 export const providerMeta = (id: BrokerId): ProviderMeta =>
@@ -86,6 +96,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   oanda: 'OANDA',
   ctrader: 'cTrader',
   mt5: 'MT5',
+  'mt-report': 'MT4/MT5 File',
   tradingview: 'TradingView',
   custom: 'Custom API',
 };

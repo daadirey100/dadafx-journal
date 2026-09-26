@@ -24,6 +24,7 @@ import type { BrokerAdapter, BrokerCredentials, BrokerId } from './core/adapter.
 import { OandaAdapter, type OandaCreds } from './adapters/oanda.ts';
 import { CTraderAdapter, consentUrl, exchangeCode, refreshTokens } from './adapters/ctrader.ts';
 import { normalizeMt5Deals, normalizeMt5Positions, validateEaPayload } from './adapters/mt5.ts';
+import { parseMTReport, normalizeMTReportTrades, type ParsedMTReport } from './adapters/mt4-report.ts';
 import { logError, scrubSecretsText, toUserError } from './core/errors.ts';
 import { isStateFresh, needsTokenRefresh, pairingVerdict } from './core/guards.ts';
 
@@ -88,6 +89,8 @@ function validateCreds(provider: string, c: any): asserts c is BrokerCredentials
     if (c && Object.keys(c).length) throw new Error('MT5 needs no credentials — only a label.');
   } else if (provider === 'custom' || provider === 'tradingview') {
     if (c && Object.keys(c).length) throw new Error(`${provider === 'tradingview' ? 'TradingView' : 'Custom API'} needs no credentials — only a label.`);
+  } else if (provider === 'mt-report') {
+    if (c && Object.keys(c).length) throw new Error('MT Report needs no credentials — only a label.');
   } else {
     throw new Error(`Unknown provider: ${provider}`);
   }
@@ -201,6 +204,53 @@ serve(async (req) => {
     if (body.action === 'tradingview-push') return bridgeIngest(service, body, 'tradingview');
     // TradingView alert webhook shorthand — same JSON, friendlier action name for alerts
     if (body.action === 'webhook' && body.source === 'tradingview') return bridgeIngest(service, body, 'tradingview');
+
+    // ---- MT4/MT5 HTML Report parsing (file upload) ----
+    if (body.action === 'parse-mt-report') {
+      const html = String(body.html ?? '');
+      if (!html || html.length < 100) return json({ error: 'HTML content too small or missing' }, 400);
+      let report: ParsedMTReport;
+      try {
+        report = parseMTReport(html);
+      } catch (e) {
+        return json({ error: `Failed to parse report: ${toUserError(e)}` }, 400);
+      }
+      const fills = normalizeMTReportTrades(report.trades);
+      return json({ ok: true, trades: report.trades, fills: fills.slice(0, 50), total: fills.length, accountInfo: report.accountInfo });
+    }
+
+    if (body.action === 'import-mt-report') {
+      const html = String(body.html ?? '');
+      if (!html || html.length < 100) return json({ error: 'HTML content too small or missing' }, 400);
+      let report: ParsedMTReport;
+      try {
+        report = parseMTReport(html);
+      } catch (e) {
+        return json({ error: `Failed to parse report: ${toUserError(e)}` }, 400);
+      }
+      const fills = normalizeMTReportTrades(report.trades);
+      if (fills.length === 0) return json({ error: 'No valid trades found in report' }, 400);
+
+      // Create a temporary connection for this import (or use existing mt-report connection)
+      const label = String(body.label || 'MT4/MT5 HTML Import').slice(0, 80);
+      const { data: conn, error: insErr } = await service.from('broker_connections').insert({
+        user_id: user.id,
+        provider: 'mt-report',
+        label,
+        credentials_enc: await encryptJSON({ provider: 'mt-report', importedAt: new Date().toISOString() }),
+        status: 'connected',
+      }).select('id').single();
+      if (insErr || !conn) return json({ error: 'Could not create import record' }, 500);
+
+      const r = await mergeFills(service, user.id, conn.id, 'mt-report', fills);
+      await service.from('broker_sync_logs').insert({
+        user_id: user.id, connection_id: conn.id, provider: 'mt-report', kind: 'sync',
+        status: 'success', completed_at: new Date().toISOString(),
+        records_fetched: fills.length, records_created: r.imported,
+        records_updated: 0, records_skipped: r.skipped, duration_ms: 0,
+      });
+      return json({ ok: true, imported: r.imported, skipped: r.skipped, connectionId: conn.id });
+    }
 
     // ---- Scheduled pass (shared cron secret, no user JWT) ----
     if (body.action === 'sync-due') {
@@ -516,10 +566,14 @@ async function loadCreds(service: any, connectionId: string, userId: string) {
 
 async function syncOrHealth(service: any, _user: any, userId: string, connectionId: string, mode: 'sync' | 'health') {
   const { row, creds, tokens } = await loadCreds(service, connectionId, userId);
-  if (row.provider === 'mt5' || row.provider === 'custom' || row.provider === 'tradingview') {
+  if (row.provider === 'mt5' || row.provider === 'custom' || row.provider === 'tradingview' || row.provider === 'mt-report') {
     return mode === 'health'
-      ? { ok: true, message: 'Push mode — data arrives from your terminal / script / TradingView alerts' }
-      : { imported: 0, skipped: 0, note: 'Push-only connection — history arrives via pushes, nothing to pull' };
+      ? { ok: true, message: row.provider === 'mt-report'
+          ? 'File upload mode — import HTML reports from MT4/MT5 terminal'
+          : 'Push mode — data arrives from your terminal / script / TradingView alerts' }
+      : { imported: 0, skipped: 0, note: row.provider === 'mt-report'
+          ? 'File upload only — use Brokers → MT4/MT5 File Upload to import reports'
+          : 'Push-only connection — history arrives via pushes, nothing to pull' };
   }
   const adapter = adapterFor(row.provider, creds, tokens);
   if (mode === 'health') {

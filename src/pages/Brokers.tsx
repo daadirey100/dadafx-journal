@@ -126,6 +126,13 @@ export default function Brokers({ onGo }: { onGo: (p: string) => void }) {
 
   const submit = async () => {
     if (!setup) return;
+
+    // MT4/MT5 File Upload - handled separately with file input
+    if (setup.id === 'mt-report') {
+      // File upload is handled in the setup UI via file input
+      return;
+    }
+
     if (setup.id === 'ctrader') {
       setBusy('connect');
       try {
@@ -363,6 +370,59 @@ export default function Brokers({ onGo }: { onGo: (p: string) => void }) {
                 <p>4. Type the code into the EA. <b>You never see any token.</b> Each terminal syncs only to its owner's journal.</p>
               </div>
             )}
+            {setup.id === 'mt-report' && (
+              <div className="space-y-3">
+                <div className="text-[13px] rounded-xl border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 space-y-1.5 text-slate-600 dark:text-slate-300">
+                  <p className="font-extrabold text-slate-900 dark:text-white">Drag & drop — no passwords, no EA needed</p>
+                  <p>1. Open MT4/MT5 desktop app → <b>Terminal → Account History</b></p>
+                  <p>2. Right-click → select time period (e.g., <b>All History</b>)</p>
+                  <p>3. Right-click → <b>Save as Report</b> → choose <b>HTML</b></p>
+                  <p>4. <b>Report must be in English</b> (View → Languages → English in MT terminal)</p>
+                </div>
+                <div className="rounded-2xl border-2 border-dashed border-indigo-400 dark:border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/30 p-5 text-center">
+                  <input
+                    type="file"
+                    accept=".html,.htm"
+                    className="sr-only"
+                    id="mt-report-upload"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+                        toast.err('Please select an .html file');
+                        return;
+                      }
+                      const html = await file.text();
+                      setBusy('import');
+                      try {
+                        const { data, error } = await call('import-mt-report', {
+                          html,
+                          label: vals.label?.trim() || undefined,
+                        });
+                        if (error) throw error;
+                        toast.ok(`Imported ${data.imported} trades ✅`);
+                        load();
+                        setSetup(null);
+                        setStep('choose');
+                      } catch (err: any) {
+                        toast.err(err?.message ?? 'Import failed');
+                      } finally {
+                        setBusy(null);
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }}
+                  />
+                  <label htmlFor="mt-report-upload" className="cursor-pointer block">
+                    <p className="font-extrabold text-indigo-600 dark:text-indigo-300 mb-1">Drop HTML report here or click to browse</p>
+                    <p className="text-[11px] text-slate-500">.html or .htm files from MT4/MT5 "Save as Report"</p>
+                  </label>
+                  {busy === 'import' && <p className="text-sm text-indigo-600 mt-2 animate-pulse">Processing report…</p>}
+                </div>
+                <p className="text-[11px] text-slate-500 text-center">
+                  💡 <b>Tip:</b> For ongoing auto-sync, use <b>MetaTrader 5</b> above with the bridge EA instead.
+                </p>
+              </div>
+            )}
             {(setup.id === 'custom' || setup.id === 'tradingview') && !apiToken && (
               <div className="text-[13px] rounded-xl border border-slate-200 dark:border-slate-700 px-3.5 py-2.5 space-y-1.5 text-slate-600 dark:text-slate-300">
                 {setup.id === 'tradingview' ? (
@@ -447,7 +507,7 @@ export default function Brokers({ onGo }: { onGo: (p: string) => void }) {
             )}
             <div className="flex justify-end gap-2">
               <button className={btnGhost} onClick={() => { setSetup(null); setStep('choose'); setPairing(null); setApiToken(null); }}>Back</button>
-              {!pairing && !apiToken && <button className={btnPrimary} onClick={submit} disabled={busy === 'connect'}>{busy === 'connect' ? 'Working…' : setup.id === 'mt5' ? 'Generate pairing code' : setup.id === 'custom' ? 'Generate API token' : setup.id === 'tradingview' ? 'Generate TradingView token' : setup.id === 'ctrader' ? 'Continue with cTrader' : `Connect ${setup.name}`}</button>}
+              {!pairing && !apiToken && setup.id !== 'mt-report' && <button className={btnPrimary} onClick={submit} disabled={busy === 'connect'}>{busy === 'connect' ? 'Working…' : setup.id === 'mt5' ? 'Generate pairing code' : setup.id === 'custom' ? 'Generate API token' : setup.id === 'tradingview' ? 'Generate TradingView token' : setup.id === 'ctrader' ? 'Continue with cTrader' : `Connect ${setup.name}`}</button>}
             </div>
             <p className="text-[11px] text-slate-400">Secrets are encrypted server-side and never readable.{setup.docsUrl && <> <a className="underline" href={setup.docsUrl} target="_blank" rel="noreferrer">Official {setup.name} docs →</a></>}</p>
           </div>

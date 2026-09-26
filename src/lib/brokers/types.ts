@@ -10,7 +10,7 @@
 // the normalized models below.
 // ============================================================================
 
-export type BrokerId = 'oanda' | 'ctrader' | 'mt5' | 'custom' | 'tradingview';
+export type BrokerId = 'oanda' | 'ctrader' | 'mt5' | 'custom' | 'tradingview' | 'mt-report';
 
 export type BrokerSource = 'manual' | BrokerId;
 
@@ -112,7 +112,9 @@ export type BrokerCredentials =
   // minted server-side via the Spotware consent page + callback exchange.
   | { provider: 'ctrader'; environment: 'demo' | 'live'; label?: string; accountId?: string }
   | { provider: 'mt5'; bridgeToken: string }
-  | { provider: 'custom'; bridgeToken: string };
+  | { provider: 'custom'; bridgeToken: string }
+  // mt-report is file-upload only — no credentials, just a label
+  | { provider: 'mt-report'; label?: string };
 
 /**
  * THE contract. Every provider adapter implements this — server-side.
