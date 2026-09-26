@@ -249,79 +249,12 @@ export default function Brokers({ onGo }: { onGo: (p: string) => void }) {
 
   return (
     <div className="space-y-4">
-      <PageHeader eyebrow="Read-only auto-import" title="Broker Connections"
-        sub="Connect a platform once — closed trades flow into your journal automatically. Viewing only: no orders, no closes, no money movement. Ever."
-        right={<button className={btnPrimary} onClick={() => openWizard()}><Glyph name="plus" className="w-4 h-4" />Connect Broker</button>} />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {PROVIDERS.map(p => (
-          <Card key={p.id} lift>
-            <div className="flex items-center gap-2.5">
-              <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center"><Glyph name="link" className="w-5 h-5" /></span>
-              <div>
-                <h2 className="font-display font-extrabold tracking-tight">{p.name}</h2>
-                <p className="text-[11px] text-slate-500">{p.tagline}</p>
-              </div>
-            </div>
-            <button className={btnPrimary + ' w-full mt-3'} onClick={() => openWizard(p)}>Connect {p.name}</button>
-          </Card>
-        ))}
+      <PageHeader eyebrow="" title="" sub="" right={null} />
+      <div className="text-center py-12 text-slate-400">
+        <p>Broker connections hidden.</p>
       </div>
-
-      <h2 className="font-display font-extrabold tracking-tight text-slate-900 dark:text-white pt-1">Connected accounts</h2>
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" aria-label="Loading connections">
-          {[0, 1, 2].map(i => (
-            <Card key={i}>
-              <div className="h-5 w-2/3 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse" />
-              <div className="h-4 w-1/2 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse mt-2" />
-              <div className="h-9 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse mt-3" />
-            </Card>
-          ))}
-        </div>
-      )
-        : conns.length === 0 ? (
-          <Card><p className="text-sm text-slate-400">Nothing connected yet. Hit <b>+ Connect Broker</b> above — your journal stays exactly as it is.</p></Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {conns.map(c => {
-              const st = statusOf(c);
-              const log = lastLogs[c.id];
-              const cAccts = accts.filter(a => a.connection_id === c.id);
-              const cPos = livePos.filter(p => p.connection_id === c.id);
-              return (
-                <Card key={c.id} lift>
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-display font-extrabold tracking-tight">{providerMeta(c.provider).name}</h3>
-                    <Badge tone={st.tone}>{st.label}</Badge>
-                  </div>
-                  <p className="text-sm font-bold mt-1">{c.label}</p>
-                  <p className="text-xs text-slate-500 num">Account {mask(c.external_account_id ?? cAccts[0]?.external_account_id)}{c.environment ? ` · ${c.environment}` : ''}</p>
-                  <p className="text-[11px] text-slate-500 num mt-1">
-                    Last sync: {log?.completed_at ? ago(log.completed_at) : c.lastSyncAt ? ago(c.lastSyncAt) : 'never'}
-                    {log ? ` · ${log.status === 'success' ? `✓ ${log.records_created} imported` : '✕ failed'}` : ` · ${c.importedCount} imported total`}
-                  </p>
-                  {cAccts.length > 0 && (
-                    <p className="text-[11px] text-slate-500 num mt-1">
-                      {cAccts.map(a => `${a.currency} ${Number(a.equity).toLocaleString()}`).join(' · ')}
-                    </p>
-                  )}
-                  {cPos.length > 0 && (
-                    <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-300 mt-1">{cPos.length} open position{cPos.length > 1 ? 's' : ''} live</p>
-                  )}
-                  {c.lastError && <p className="text-[11px] text-red-600 mt-1">⚠ {c.lastError}</p>}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <button className={btnPrimary + ' !h-9 !px-3 !text-xs flex-1'} disabled={busy === c.id} onClick={() => syncOne(c.id)}>
-                      <Glyph name="refresh" className={`w-3.5 h-3.5 ${busy === c.id ? 'animate-spin' : ''}`} />{busy === c.id ? `Syncing… ${Math.max(0, Math.floor((nowT - busyAt) / 1000))}s` : 'Sync Now'}
-                    </button>
-                    <button className={btnGhost + ' !h-9 !px-3 !text-xs'} onClick={() => { setSettings(c); setRename(c.label); }}>Settings</button>
-                    <button className="text-xs font-bold text-red-500 hover:underline px-1" onClick={() => setDel(c.id)}>Disconnect</button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+    </div>
+  );
 
       {/* Connect wizard */}
       <Modal open={!!setup || !!done} onClose={() => { setSetup(null); setStep('choose'); setPairing(null); setApiToken(null); setDone(null); }} title={step === 'choose' ? 'Connect a broker' : step === 'done' && done ? 'Connected' : setup ? `Connect ${setup.name}` : ''} eyebrow={step === 'choose' ? 'Step 1 of 6 · choose' : step === 'setup' ? 'Step 2–3 · instructions + authorize' : step === 'accounts' ? 'Step 4 · accounts' : step === 'syncing' ? 'Step 5 · syncing' : 'Step 6 · done'} wide>
