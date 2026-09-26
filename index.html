@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/jpeg" href="/logo.jpeg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Dada FX Journal — Personal Forex Trading Journal</title>
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DadaFX" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/logo.jpeg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@500;600&family=Caveat:wght@600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="app-error" style="display:none;position:fixed;inset:0;z-index:9999;background:#fff;color:#0f172a;font-family:sans-serif;align-items:center;justify-content:center;padding:24px;">
+      <div style="max-width:520px;text-align:center;">
+        <p style="font-weight:800;font-size:18px;margin-bottom:8px;">Something broke — send this to your assistant:</p>
+        <p id="app-error-msg" style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:13px;word-break:break-word;"></p>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('error', function (e) {
+        var m = String((e && e.message) || '');
+        // External CDN (TradingView, fonts, etc.) is cross-origin -> browser masks to "Script error." — ignore it
+        if (!m || m === 'Script error.' || m === 'Script error') return;
+        var box = document.getElementById('app-error');
+        var msg = document.getElementById('app-error-msg');
+        if (box && msg && box.style.display === 'none') {
+          msg.textContent = m || 'unknown error';
+          box.style.display = 'flex';
+        }
+      });
+      // Background failures (slow feed timeouts, offline blips) must NEVER
+      // nuke the UI — only real render crashes show the overlay.
+      window.addEventListener('unhandledrejection', function (e) {
+        try {
+          var m = String((e && e.reason && (e.reason.message || e.reason)) || '');
+          if (/timed out|timeout|abort|network|fetch|failed to fetch/i.test(m)) return;
+        } catch (err) { /* fall through */ }
+        var box = document.getElementById('app-error');
+        var msg = document.getElementById('app-error-msg');
+        if (box && msg && box.style.display === 'none') {
+          msg.textContent = String((e && e.reason && (e.reason.message || e.reason)) || 'unknown error');
+          box.style.display = 'flex';
+        }
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

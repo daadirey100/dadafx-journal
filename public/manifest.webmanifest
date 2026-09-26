@@ -1,0 +1,22 @@
+{
+  "name": "Dada FX Journal",
+  "short_name": "DadaFX",
+  "description": "Personal forex trading journal — trades, calendar, analytics. Install on Android & iOS.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "/logo.jpeg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Log trade", "url": "/?go=journal", "description": "Log a new trade in 20 seconds" },
+    { "name": "Dashboard", "url": "/?go=dashboard", "description": "Equity, streaks and today" },
+    { "name": "TradingView", "url": "/?go=charts", "description": "Live charts with journal overlay" }
+  ]
+}

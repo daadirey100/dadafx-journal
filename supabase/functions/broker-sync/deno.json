@@ -1,0 +1,6 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "protobufjs": "npm:protobufjs@7.4.0"
+  }
+}
